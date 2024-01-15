@@ -1,0 +1,65 @@
+---
+title: "STA302 Tutorial 2"
+author: "Talia Fabregas"
+format: pdf
+editor: visual
+---
+
+## Dinesafe Data from Open Data Toronto
+
+Using the DineSafe data from Open Data Toronto, I have created a mini relational database to keep track of establishments, inspections, and infractions across the city in 2022. This database follows the concepts taught in CSC343H1 Introduction to Databases and is similar to an example provided by Professor Diane Horton last semester. I have used the R packages tidyverse, janitor, dplyr, and ggplot2 to clean and plot my data for the purposes of this tutorial.
+
+```{r}
+library(tidyverse)
+library(janitor)
+library(dplyr)
+library(ggplot2)
+```
+
+Only the fines_2022 table was used for the graph shown below. The additional tables have been included for the purpose of future use and practice.
+
+```{r}
+#| echo: false
+
+dinesafe_raw <- read.csv("Dinesafe.csv")
+
+## Creating a cleaned, mini relational database about inspections and infractions
+## Inspired by one created in CSC343H1 Fall 2023 with Prof. Diane Horton
+## only including data from 2022
+dinesafe_clean <- dinesafe_raw |>
+  clean_names() |>
+  filter(!is.na(establishment_name)) |>
+  filter(inspection_date >= '2022-01-01') |>
+  filter(inspection_date <= '2022-12-31') 
+
+establishment_data <- dinesafe_clean |>
+  filter(!is.na(establishment_type)) |> 
+  filter(!is.na(min_inspections_per_year)) |>
+  select(establishment_id, establishment_name, establishment_type, min_inspections_per_year)
+
+inspection_data <- dinesafe_clean |>
+  select(inspection_id, establishment_id, inspection_date)
+
+infraction_data <- dinesafe_clean |>
+  select(inspection_id, establishment_id, establishment_status, 
+         infraction_details, severity)
+
+## the data that will be used in the graph
+fines_2022 <- dinesafe_clean %>%
+  filter(!is.na(amount_fined)) %>%
+  mutate(inspection_date = as.Date(inspection_date)) %>%
+  group_by(month = format(inspection_date, "%Y-%m")) %>%
+  summarise(total_amount_fined = sum(amount_fined, na.rm = TRUE))
+
+ggplot(fines_2022, aes(x = month, y = total_amount_fined)) +
+  geom_bar(stat = "identity", fill = "lightpink", color="black") +
+  labs(title = "Total Amount of DineSafe Fines Issued Across Toronto Per Month in 2022",
+       x = "Month",
+       y = "Total Amount Fined") +
+  theme_minimal()
+  
+
+
+
+
+```
